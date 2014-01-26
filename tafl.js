@@ -1,5 +1,6 @@
 "use strict";
 
+// Immutable Move object
 var Move = (function () {
     var that = {};
 
@@ -9,24 +10,19 @@ var Move = (function () {
         if (!arg.to) { throw new TypeError("null to"); }
 
         that.player = arg.player;
-        that.from = arg.from;
-        that.to = arg.to;
+        that.start = arg.from;
+        that.end = arg.to;
     }
 
     Move.prototype = {
         get player() { return that.player; },
         set player(value) { throw new Error(); },
 
-        get from() { return that.from; },
-        set from(value) { throw new Error(); },
+        get start() { return that.start; },
+        set start(value) { throw new Error(); },
 
-        get to() { return that.to; },
-        set to(value) { throw new Error(); },
-
-        get valid() {
-            return false;
-        },
-        set valid(value) { throw new Error(); }
+        get end() { return that.end; },
+        set end(value) { throw new Error(); },
     };
     return Move;
 }());
@@ -53,7 +49,7 @@ module.exports.Board = (function BoardClosure() {
     function Board(arg) {
         that = arg || {
             state: defaultState(),
-            activePlayer: "defenders",
+            activePlayer: "defenders", // could also be "attackers"
             moves: []
         };
     }
@@ -70,17 +66,44 @@ module.exports.Board = (function BoardClosure() {
         get activePlayer() { return that.activePlayer; },
         set activePlayer(value) { throw new Error(); },
 
-        update: function (arg) {
-            var move = new Move(arg);
+        occupied: function (cell) {
+            return false;
+        },
 
-            if (move.player !== this.activePlayer) {
-                throw new Error("Wrong player");
+        update: function (arg) {
+            var move = new Move(arg),
+                errMsg = this.invalid(move);
+
+            if (errMsg) {
+                throw new Error("Invalid move: " + errMsg);
             }
-            if (!move.valid) {
-                throw new Error("Invalid move");
-            }
+
             that.moves.push(move);
+        },
+
+        invalid: function (move) {
+            var rows = "ABCDEFGHIJK"; // TODO in terms of char codes
+            if (rows.indexOf(move.start[0]) === -1 || rows.indexOf(move.end[0]) === -1) {
+                return "outside board";
+            }
+            if (move.start[1] >= this.sideLength || move.end[1] >= this.sideLength) {
+                return "outside board";
+            }
+            if (move.start[0] !== move.end[0] && move.start[1] !== move.end[1]) {
+                return "not straight";
+            }
+            if (!this.occupied(move.start)) {
+                return "no one at start position";
+            }
+            if (this.occupied(move.end)) {
+                return "end position occupied";
+            }
+            if (move.player !== this.activePlayer) {
+                return "wrong player";
+            }
+            return false;
         }
+
     };
 
     return Board;
