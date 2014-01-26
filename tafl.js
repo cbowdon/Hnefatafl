@@ -10,12 +10,13 @@
         safehouse: "S",
         none: "-",
         lookup: function (value) {
-            Object.keys(this).forEach(function (key) {
-                if (this[key] === value) {
+            var key;
+            for (key in this) {
+                if (this.hasOwnProperty(key) && this[key] === value) {
                     return key;
                 }
-            });
-            return false;
+            }
+            throw new TypeError("Type " + value + " not found");
         },
     });
 
@@ -24,37 +25,29 @@
         defenders: "defenders",
     });
 
-    // Cell with mutable occupier
+    // Cell with mutable occupant
     Cell = (function CellClosure() {
-        var that;
+        var internal;
 
-        function Cell(arg) {
-            that = {
-                row: arg.row,
-                col: arg.col,
-                name: "R" + arg.row + "C" + arg.col,
-                occupier: arg.occupier || types.none,
+        function Cell(ref) {
+            if (!ref || ref.length !== 2) { throw new TypeError("Cell ref invalid - should be 2-element array"); }
+            internal = {
+                row: ref[0],
+                col: ref[1],
+                name: "R" + ref.row + "C" + ref.col,
             };
         }
 
         Cell.prototype = {
 
-            get row() { return that.row; },
+            get row() { return internal.row; },
             set row(value) { throw new TypeError(); },
 
-            get col() { return that.col; },
+            get col() { return internal.col; },
             set col(value) { throw new TypeError(); },
 
-            get name() { return that.name; },
+            get name() { return internal.name; },
             set name(value) { throw new TypeError(); },
-
-            get occupier() { return that.occupier; },
-            set occupier(value) {
-                if (that.occupier !== types.none) {
-                    throw new Error("Cell already occupied");
-                }
-                that.occupier = value;
-            },
         };
 
         return Cell;
@@ -62,40 +55,40 @@
 
     // Immutable Move object
     Move = (function MoveClosure() {
-        var that = {};
+        var internal;
 
         function Move(arg) {
             if (!arg.player) { throw new TypeError("'player' not defined"); }
-            if (!arg.from || arg.from.length !== 2) { throw new TypeError("'from' not a 2-element array"); }
-            if (!arg.to || arg.to.length !== 2) { throw new TypeError("'to' not a 2-element array"); }
 
-            that.player = arg.player;
-            that.start = arg.from;
-            that.end = arg.to;
+            internal = {
+                player: arg.player,
+                start:  new Cell(arg.from),
+                end:    new Cell(arg.to),
+            };
         }
 
         Move.prototype = {
-            get player() { return that.player; },
+            get player() { return internal.player; },
             set player(value) { throw new TypeError(); },
 
-            get start() { return that.start; },
+            get start() { return internal.start; },
             set start(value) { throw new TypeError(); },
 
-            get end() { return that.end; },
+            get end() { return internal.end; },
             set end(value) { throw new TypeError(); },
 
-            get horizontal() { return that.start[0] === that.end[0]; },
+            get horizontal() { return internal.start.row === internal.end.row; },
             set horizontal(value) { throw new TypeError(); },
 
-            get vertical() { return that.start[1] === that.end[1]; },
+            get vertical() { return internal.start.col === internal.end.col; },
             set vertical(value) { throw new TypeError(); },
 
             get distance() {
                 if (this.horizontal) {
-                    return Math.abs(that.start[1] - that.end[1]);
+                    return Math.abs(internal.start.col - internal.end.col);
                 }
                 if (this.vertical) {
-                    return Math.abs(that.start[0] - that.end[0]);
+                    return Math.abs(internal.start.row - internal.end.row);
                 }
                 throw new TypeError("Invalid (diagonal) move coordinates.");
             },
@@ -105,7 +98,7 @@
     }());
 
     Board = (function BoardClosure() {
-        var that,
+        var internal,
             defaultState;
 
         defaultState = [
@@ -123,42 +116,41 @@
         ];
 
         function buildBoard(state) {
-            var board = state.map(function (row, i) {
-                row.map(function (cellValue, j) {
-                    var type = types.lookup(cellValue);
-                    return new Cell({ occupier: type, row: i, col: j });
+            return state.map(function (row, i) {
+                return row.map(function (cellValue, j) {
+                    return types.lookup(cellValue);
                 });
             });
         }
 
         function Board(arg) {
-            that = arg || {
+            internal = arg || {
                 state: defaultState,
                 activePlayer: team.defenders, // could also be team.attackers
                 moves: []
             };
 
-            that.board = buildBoard(that.state);
+            internal.board = buildBoard(internal.state);
         }
 
         Board.prototype = {
 
             // TODO  state should be computed
-            get state() { return that.state; },
+            get state() { return internal.state; },
             set state(value) { throw new TypeError(); },
 
-            get sideLength() { return that.state.length; },
+            get sideLength() { return internal.state.length; },
             set sideLength(value) { throw new TypeError(); },
 
-            get activePlayer() { return that.activePlayer; },
+            get activePlayer() { return internal.activePlayer; },
             set activePlayer(value) { throw new TypeError(); },
 
             clear: function (move) {
-                return false;
+                throw new Error("not yet implemented");
             },
 
             occupant: function (cell) {
-                return team.defenders;
+                return internal.board[cell.row][cell.col].occupant;
             },
 
             update: function (arg) {
@@ -169,17 +161,17 @@
                     throw new Error("Invalid move: " + errMsg);
                 }
 
-                that.moves.push(move);
+                internal.moves.push(move);
             },
 
             invalid: function (move) {
                 if (move.player !== this.activePlayer) {
                     return "wrong player";
                 }
-                if (move.start[0] >= this.sideLength
-                        || move.end[0] >= this.sideLength
-                        || move.start[1] >= this.sideLength
-                        || move.end[1] >= this.sideLength) {
+                if (move.start.row >= this.sideLength
+                        || move.end.row >= this.sideLength
+                        || move.start.col >= this.sideLength
+                        || move.end.col >= this.sideLength) {
                     return "outside board";
                 }
                 if (this.occupant(move.start) !== move.player) {
