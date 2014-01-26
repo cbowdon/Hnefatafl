@@ -66,8 +66,12 @@ module.exports.Board = (function BoardClosure() {
         get activePlayer() { return that.activePlayer; },
         set activePlayer(value) { throw new Error(); },
 
-        occupied: function (cell) {
+        clear: function (move) {
             return false;
+        },
+
+        occupant: function (cell) {
+            return "defenders";
         },
 
         update: function (arg) {
@@ -82,24 +86,26 @@ module.exports.Board = (function BoardClosure() {
         },
 
         invalid: function (move) {
-            var rows = "ABCDEFGHIJK"; // TODO in terms of char codes
-            if (rows.indexOf(move.start[0]) === -1 || rows.indexOf(move.end[0]) === -1) {
+            if (move.player !== this.activePlayer) {
+                return "wrong player";
+            }
+            if (move.start[0] >= this.sideLength
+                    || move.end[0] >= this.sideLength
+                    || move.start[1] >= this.sideLength
+                    || move.end[1] >= this.sideLength) {
                 return "outside board";
             }
-            if (move.start[1] >= this.sideLength || move.end[1] >= this.sideLength) {
-                return "outside board";
+            if (this.occupant(move.start) !== move.player) {
+                return "player's piece not at start";
+            }
+            if (this.occupant(move.end) !== "none") {
+                return "end position olready occuppied";
             }
             if (move.start[0] !== move.end[0] && move.start[1] !== move.end[1]) {
                 return "not straight";
             }
-            if (!this.occupied(move.start)) {
-                return "no one at start position";
-            }
-            if (this.occupied(move.end)) {
-                return "end position occupied";
-            }
-            if (move.player !== this.activePlayer) {
-                return "wrong player";
+            if (!this.clear(move)) {
+                return "path blocked";
             }
             return false;
         }
