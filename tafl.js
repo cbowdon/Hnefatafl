@@ -25,7 +25,7 @@
         defenders: "defenders",
     });
 
-    // Cell with mutable occupant
+    // Immutable Cell
     Cell = (function CellClosure() {
         var internal;
 
@@ -34,7 +34,7 @@
             internal = {
                 row: ref[0],
                 col: ref[1],
-                name: "R" + ref.row + "C" + ref.col,
+                name: "R" + ref[0] + "C" + ref[1],
             };
         }
 
@@ -48,12 +48,16 @@
 
             get name() { return internal.name; },
             set name(value) { throw new TypeError(); },
+
+            toString: function () {
+                return this.name;
+            },
         };
 
         return Cell;
     }());
 
-    // Immutable Move object
+    // Immutable Move
     Move = (function MoveClosure() {
         var internal;
 
@@ -93,6 +97,13 @@
                 throw new TypeError("Invalid (diagonal) move coordinates.");
             },
             set distance(value) { throw new TypeError(); },
+
+            toString: function () {
+                return "{ player: " + this.player
+                    + ", start: " + this.start
+                    + ", end: " + this.end
+                    + "}";
+            },
         };
         return Move;
     }());
@@ -158,7 +169,7 @@
                     errMsg = this.invalid(move);
 
                 if (errMsg) {
-                    throw new Error("Invalid move: " + errMsg);
+                    throw new Error("Invalid move: " + move + " - " + errMsg);
                 }
 
                 internal.moves.push(move);
