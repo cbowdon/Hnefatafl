@@ -1,29 +1,37 @@
 "use strict";
 
-var Game = (function GameClosure() {
-    function Game() {
-        var board   = new Board(),
-            moves   = [];
+var Move = (function () {
+    var that = {};
+
+    function Move(arg) {
+        if (!arg.player) { throw new TypeError("null player"); }
+        if (!arg.from) { throw new TypeError("null from"); }
+        if (!arg.to) { throw new TypeError("null to"); }
+
+        that.player = arg.player;
+        that.from = arg.from;
+        that.to = arg.to;
     }
-    return Game;
+
+    Move.prototype = {
+        get player() { return that.player; },
+        set player(value) { throw new Error(); },
+
+        get from() { return that.from; },
+        set from(value) { throw new Error(); },
+
+        get to() { return that.to; },
+        set to(value) { throw new Error(); },
+
+        get valid() {
+            return false;
+        },
+        set valid(value) { throw new Error(); }
+    };
+    return Move;
 }());
 
-var Board = (function BoardClosure() {
-    function Board(args) {
-
-        var state = args.state || defaultState();
-        var activePlayer = args.activePlayer || "defenders";
-
-        get state() {
-            return state;
-        }
-
-        get sideLength() {
-            return state.length;
-        }
-
-    }
-
+module.exports.Board = (function BoardClosure() {
     function defaultState() {
         return [
             "E--aaaaa--E",
@@ -40,20 +48,40 @@ var Board = (function BoardClosure() {
         ];
     }
 
-    return Board;
-}());
+    var that;
 
-var Move = (function () {
-    function Move(args) {
-        get player() {
-            return args.player;
-        }
-        get from() {
-            return args.from;
-        }
-        get to() {
-            return args.to;
-        }
+    function Board(arg) {
+        that = arg || {
+            state: defaultState(),
+            activePlayer: "defenders",
+            moves: []
+        };
     }
-    return Move;
+
+    Board.prototype = {
+
+        // TODO  state should be computed
+        get state() { return that.state; },
+        set state(value) { throw new Error(); },
+
+        get sideLength() { return that.state.length; },
+        set sideLength(value) { throw new Error(); },
+
+        get activePlayer() { return that.activePlayer; },
+        set activePlayer(value) { throw new Error(); },
+
+        update: function (arg) {
+            var move = new Move(arg);
+
+            if (move.player !== this.activePlayer) {
+                throw new Error("Wrong player");
+            }
+            if (!move.valid) {
+                throw new Error("Invalid move");
+            }
+            that.moves.push(move);
+        }
+    };
+
+    return Board;
 }());
