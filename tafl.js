@@ -5,9 +5,9 @@ var Move = (function () {
     var that = {};
 
     function Move(arg) {
-        if (!arg.player) { throw new TypeError("null player"); }
-        if (!arg.from) { throw new TypeError("null from"); }
-        if (!arg.to) { throw new TypeError("null to"); }
+        if (!arg.player) { throw new TypeError("'player' not defined"); }
+        if (!arg.from || arg.from.length !== 2) { throw new TypeError("'from' not a 2-element array"); }
+        if (!arg.to || arg.to.length !== 2) { throw new TypeError("'to' not a 2-element array"); }
 
         that.player = arg.player;
         that.start = arg.from;
@@ -23,6 +23,23 @@ var Move = (function () {
 
         get end() { return that.end; },
         set end(value) { throw new Error(); },
+
+        get horizontal() { return that.start[0] === that.end[0]; },
+        set horizontal(value) { throw new Error(); },
+
+        get vertical() { return that.start[1] === that.end[1]; },
+        set vertical(value) { throw new Error(); },
+
+        get distance() {
+            if (this.horizontal) {
+                return Math.abs(that.start[1] - that.end[1]);
+            }
+            else if (this.vertical) {
+                return Math.abs(that.start[0] - that.end[0]);
+            }
+            throw new TypeError("Invalid (diagonal) move coordinates.");
+        },
+        set distance(value) { throw new Error(); },
     };
     return Move;
 }());
@@ -101,7 +118,7 @@ module.exports.Board = (function BoardClosure() {
             if (this.occupant(move.end) !== "none") {
                 return "end position olready occuppied";
             }
-            if (move.start[0] !== move.end[0] && move.start[1] !== move.end[1]) {
+            if (!move.horizontal && !move.vertical) {
                 return "not straight";
             }
             if (!this.clear(move)) {
