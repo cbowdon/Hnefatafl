@@ -58,6 +58,7 @@
     // Immutable Move
     Move = (function MoveClosure() {
 
+        // range from start (exclusive) to end (inclusive)
         function rangeExcInc(start, end) {
             var i, j, nums = [];
 
@@ -158,17 +159,31 @@
             this.internal = arg || {
                 state: createDefaultState(),
                 activePlayer: team.defenders, // could also be team.attackers
-                moves: []
+                moves: [],
+                lastMoveIndex: 0,
             };
         }
 
         Board.prototype = {
 
             // TODO  state should be computed
-            get state() { return this.internal.state; },
+            get state() {
+                var that    = this,
+                    moves   = this.internal.moves,
+                    last    = this.internal.lastMoveIndex;
+                moves.slice(last).forEach(function (move) {
+                    var tmp     = that.internal.state,
+                        start   = move.start,
+                        end     = move.end;
+                    tmp[end.row][end.col]     = tmp[start.row][start.col];
+                    tmp[start.row][start.col] = types.none;
+                });
+                this.internal.lastMoveIndex = moves.length;
+                return this.internal.state;
+            },
             set state(value) { throw new TypeError(); },
 
-            get sideLength() { return this.internal.state.length; },
+            get sideLength() { return this.state.length; },
             set sideLength(value) { throw new TypeError(); },
 
             get activePlayer() { return this.internal.activePlayer; },
@@ -182,12 +197,12 @@
             },
 
             occupant: function (cell) {
-                return this.internal.state[cell.row][cell.col];
+                return this.state[cell.row][cell.col];
             },
 
             update: function (arg) {
-                var move = new Move(arg),
-                    errMsg = this.invalid(move);
+                var move    = new Move(arg),
+                    errMsg  = this.invalid(move);
 
                 if (errMsg) {
                     throw new Error("Invalid move: " + move + " - " + errMsg);
@@ -229,15 +244,24 @@
                     return "path blocked";
                 }
                 return false;
-            }
+            },
+
+            toString: function () {
+                var tmp     = this.state[0].map(function () { return "-"; }),
+                    edge    = Array.join(tmp, '-'),
+                    rows    = this.state.map(function (row) {
+                        return "|" + Array.join(row, ' ') + "|";
+                    });
+                return edge + "-\n" + Array.join(rows, "\n") + "\n-" + edge;
+            },
         };
 
         return Board;
     }());
 
-    root.TypeError = TypeError;
-    root.Move = Move;
-    root.Board = Board;
-    root.team = team;
+    root.TypeError  = TypeError;
+    root.Move       = Move;
+    root.Board      = Board;
+    root.team       = team;
 
 }(this));
