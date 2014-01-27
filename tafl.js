@@ -49,7 +49,7 @@
             get name() { return this.internal.name; },
             set name(value) { throw new TypeError(); },
 
-            toString: function () { return this.name; },
+            toString: function Cell_toString() { return this.name; },
         };
 
         return Cell;
@@ -128,7 +128,7 @@
             },
             set path(value) { throw new TypeError(); },
 
-            toString: function () {
+            toString: function Move_toString() {
                 return "{ player: " + this.player
                     + ", start: " + this.start
                     + ", end: " + this.end
@@ -189,18 +189,18 @@
             get activePlayer() { return this.internal.activePlayer; },
             set activePlayer(value) { throw new TypeError(); },
 
-            clear: function (move) {
+            clear: function Board_clear(move) {
                 var that = this;
                 return move.path.every(function (cell) {
                     return that.occupant(cell) === types.none;
                 });
             },
 
-            occupant: function (cell) {
+            occupant: function Board_occupant(cell) {
                 return this.state[cell.row][cell.col];
             },
 
-            update: function (arg) {
+            update: function Board_update(arg) {
                 var move    = new Move(arg),
                     errMsg  = this.invalid(move);
 
@@ -212,7 +212,7 @@
                 this.internal.activePlayer = this.activePlayer === team.attackers ?  team.defenders : team.attackers;
             },
 
-            invalid: function (move) {
+            invalid: function Board_invalid(move) {
                 var startCellOccupant;
                 if (move.player !== this.activePlayer) {
                     return "wrong player";
@@ -246,7 +246,7 @@
                 return false;
             },
 
-            toString: function () {
+            toString: function Board_toString() {
                 var tmp     = this.state[0].map(function () { return "-"; }),
                     edge    = Array.join(tmp, '-'),
                     rows    = this.state.map(function (row) {
