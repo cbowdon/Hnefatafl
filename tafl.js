@@ -229,15 +229,17 @@
 
                 // TODO less type-switching, more DAT OO
                 this.adjacent(end)
-                    .filter(function (piece) {
+                    .filter(function (cell) {
+                        var piece = that.occupant(cell);
                         if (that.activePlayer === team.attackers) {
                             return piece === types.defender || piece === types.king;
                         }
                         return piece === types.attacker;
                     })
-                    .filter(function (enemy) {
-                        if (that.sandwiched(enemy, end)) {
-                            that.deletePiece(enemy);
+                    .filter(function (enemyCell) {
+                        var enemy = that.occupant(enemyCell);
+                        if (that.sandwiched(enemyCell, end)) {
+                            that.deletePiece(enemyCell);
                             if (enemy === types.king) {
                                 that.winGame(team.attackers);
                             }
@@ -247,8 +249,30 @@
                 this.internal.activePlayer = this.activePlayer === team.attackers ?  team.defenders : team.attackers;
             },
 
-            sandwiched: function Board_sandwiched(enemy, cell) {
-                throw new Error("not yet implemented.");
+            deletePiece: function Board_deletePiece(cell) {
+                this.internal.state[cell.row][cell.col] = types.none;
+            },
+
+            sandwiched: function Board_sandwiched(enemyCell, cell) {
+                var piece   = this.occupant(cell),
+                    enemy   = this.occupant(enemyCell),
+                    oppositeRow,
+                    oppositeCol,
+                    oppositePiece;
+
+                if (cell.row === enemyCell.row) {
+                    oppositeRow = cell.row;
+                    oppositeCol = (enemyCell.col > cell.col)  ? cell.col + 2 : cell.col - 2;
+                } else {
+                    oppositeRow = (enemyCell.row > cell.row)  ? cell.row + 2 : cell.row - 2;
+                    oppositeCol = cell.col;
+                }
+
+                oppositePiece = this.occupant(new Cell([oppositeRow, oppositeCol]));
+
+                return oppositePiece === piece
+                    || (piece === types.defender && oppositePiece === types.king)
+                    || (piece === types.king && oppositePiece === types.defender);
             },
 
             winGame: function Board_winGame(winner) {
