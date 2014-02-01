@@ -30,7 +30,9 @@
     Cell = (function CellClosure() {
 
         function Cell(ref) {
-            if (!ref || ref.length !== 2) { throw new TypeError("Cell ref invalid - should be 2-element array"); }
+            if (!ref || ref.length !== 2) {
+                throw new TypeError("Cell ref invalid - should be 2-element array: " + ref);
+            }
             this.internal = {
                 row: ref[0],
                 col: ref[1],
@@ -176,13 +178,12 @@
             set activePlayer(value) { throw new TypeError(); },
 
             adjacent: function Board_adjacent(cell) {
-                var north   = new Cell(cell.row + 1, cell.col),
-                    south   = new Cell(cell.row - 1, cell.col),
-                    east    = new Cell(cell.row, cell.col + 1),
-                    west    = new Cell(cell.row, cell.row - 1),
-                    adjs    = [];
+                var north   = new Cell([cell.row + 1, cell.col]),
+                    south   = new Cell([cell.row - 1, cell.col]),
+                    east    = new Cell([cell.row, cell.col + 1]),
+                    west    = new Cell([cell.row, cell.row - 1]);
 
-                [north, south, east, west]
+                return [north, south, east, west]
                     .filter(this.inBounds.bind(this))
                     .map(this.occupant.bind(this));
             },
@@ -211,7 +212,8 @@
                     errMsg  = this.invalid(move),
                     tmp     = this.internal.state,
                     start   = move.start,
-                    end     = move.end;
+                    end     = move.end,
+                    that    = this;
 
                 if (errMsg) {
                     throw new Error("Invalid move: " + move + " - " + errMsg);
@@ -229,16 +231,16 @@
                 // TODO less type-switching, more DAT OO
                 this.adjacent(end)
                     .filter(function (piece) {
-                        if (this.activePlayer === team.attackers) {
+                        if (that.activePlayer === team.attackers) {
                             return piece === types.defender || piece === types.king;
                         }
                         return piece === types.attacker;
                     })
                     .filter(function (enemy) {
-                        if (this.sandwiched(enemy, end)) {
-                            this.deletePiece(enemy);
+                        if (that.sandwiched(enemy, end)) {
+                            that.deletePiece(enemy);
                             if (enemy === types.king) {
-                                this.winGame(team.attackers);
+                                that.winGame(team.attackers);
                             }
                         }
                     });
