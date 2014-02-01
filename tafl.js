@@ -1,4 +1,4 @@
-(function (root) {
+(function (exports) {
     "use strict";
 
     var Cell, Move, Board, types, team;
@@ -162,7 +162,7 @@
                 state: createDefaultState(),
                 activePlayer: team.defenders, // could also be team.attackers
                 moves: [],
-                lastMoveIndex: 0,
+                finished: false,
             };
         }
 
@@ -184,8 +184,7 @@
                     west    = new Cell([cell.row, cell.row - 1]);
 
                 return [north, south, east, west]
-                    .filter(this.inBounds.bind(this))
-                    .map(this.occupant.bind(this));
+                    .filter(this.inBounds.bind(this));
             },
 
             inBounds: function Board_inBounds(cell) {
@@ -253,11 +252,15 @@
             },
 
             winGame: function Board_winGame(winner) {
-                throw new Error("not yet implemented.");
+                this.internal.finished = true;
+                this.internal.winner = winner;
             },
 
             invalid: function Board_invalid(move) {
                 var piece;
+                if (this.finished) {
+                    return "game already over";
+                }
                 if (move.player !== this.activePlayer) {
                     return "wrong player";
                 }
@@ -303,9 +306,9 @@
         return Board;
     }());
 
-    root.TypeError  = TypeError;
-    root.Move       = Move;
-    root.Board      = Board;
-    root.team       = team;
+    exports.TypeError  = TypeError;
+    exports.Move       = Move;
+    exports.Board      = Board;
+    exports.team       = team;
 
 }(this));

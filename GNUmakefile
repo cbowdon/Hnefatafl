@@ -4,4 +4,4 @@ lint:
 	jslint *.js
 
 test: lint
-	node test
+	node node-test-harness
