@@ -166,21 +166,7 @@
 
         Board.prototype = {
 
-            // TODO  state should be computed
-            get state() {
-                var that    = this,
-                    moves   = this.internal.moves,
-                    last    = this.internal.lastMoveIndex;
-                moves.slice(last).forEach(function (move) {
-                    var tmp     = that.internal.state,
-                        start   = move.start,
-                        end     = move.end;
-                    tmp[end.row][end.col]     = tmp[start.row][start.col];
-                    tmp[start.row][start.col] = types.none;
-                });
-                this.internal.lastMoveIndex = moves.length;
-                return this.internal.state;
-            },
+            get state() { return this.internal.state; },
             set state(value) { throw new TypeError(); },
 
             get sideLength() { return this.state.length; },
@@ -189,10 +175,30 @@
             get activePlayer() { return this.internal.activePlayer; },
             set activePlayer(value) { throw new TypeError(); },
 
-            clear: function Board_clear(move) {
+            adjacent: function Board_adjacent(cell) {
+                var north   = new Cell(cell.row + 1, cell.col),
+                    south   = new Cell(cell.row - 1, cell.col),
+                    east    = new Cell(cell.row, cell.col + 1),
+                    west    = new Cell(cell.row, cell.row - 1),
+                    adjs    = [];
+
+                [north, south, east, west]
+                    .filter(this.inBounds.bind(this))
+                    .map(this.occupant.bind(this));
+            },
+
+            inBounds: function Board_inBounds(cell) {
+                return cell.row >= 0
+                    && cell.row < this.sideLength
+                    && cell.col >= 0
+                    && cell.col < this.sideLength;
+            },
+
+            clear: function Board_clear(move, piece) {
                 var that = this;
                 return move.path.every(function (cell) {
-                    return that.occupant(cell) === types.none;
+                    var occupier = that.occupant(cell);
+                    return occupier === types.none || (piece === types.king && occupier === types.safehouse);
                 });
             },
 
@@ -202,18 +208,54 @@
 
             update: function Board_update(arg) {
                 var move    = new Move(arg),
-                    errMsg  = this.invalid(move);
+                    errMsg  = this.invalid(move),
+                    tmp     = this.internal.state,
+                    start   = move.start,
+                    end     = move.end;
 
                 if (errMsg) {
                     throw new Error("Invalid move: " + move + " - " + errMsg);
                 }
 
                 this.internal.moves.push(move);
+
+                tmp[end.row][end.col]     = tmp[start.row][start.col];
+                tmp[start.row][start.col] = types.none;
+
+                if (this.occupant(end) === types.safehouse) {
+                    this.winGame(team.defenders);
+                }
+
+                // TODO less type-switching, more DAT OO
+                this.adjacent(end)
+                    .filter(function (piece) {
+                        if (this.activePlayer === team.attackers) {
+                            return piece === types.defender || piece === types.king;
+                        }
+                        return piece === types.attacker;
+                    })
+                    .filter(function (enemy) {
+                        if (this.sandwiched(enemy, end)) {
+                            this.deletePiece(enemy);
+                            if (enemy === types.king) {
+                                this.winGame(team.attackers);
+                            }
+                        }
+                    });
+
                 this.internal.activePlayer = this.activePlayer === team.attackers ?  team.defenders : team.attackers;
             },
 
+            sandwiched: function Board_sandwiched(enemy, cell) {
+                throw new Error("not yet implemented.");
+            },
+
+            winGame: function Board_winGame(winner) {
+                throw new Error("not yet implemented.");
+            },
+
             invalid: function Board_invalid(move) {
-                var startCellOccupant;
+                var piece;
                 if (move.player !== this.activePlayer) {
                     return "wrong player";
                 }
@@ -227,20 +269,20 @@
                         && move.start.col === move.end.col) {
                     return "didn't move";
                 }
-                startCellOccupant = this.occupant(move.start);
+                piece = this.occupant(move.start);
                 if (move.player === team.attackers
-                        && startCellOccupant !== types.attacker) {
+                        && piece !== types.attacker) {
                     return "player's piece not at start";
                 }
                 if (move.player === team.defenders
-                        && startCellOccupant !== types.defender
-                        && startCellOccupant !== types.king) {
+                        && piece !== types.defender
+                        && piece !== types.king) {
                     return "player's piece not at start";
                 }
                 if (!move.horizontal && !move.vertical) {
                     return "not straight";
                 }
-                if (!this.clear(move)) {
+                if (!this.clear(move, piece)) {
                     return "path blocked";
                 }
                 return false;
