@@ -73,33 +73,23 @@
     });
 
     // Immutable Cell
-    // TODO private members
     Cell = (function CellClosure() {
 
         function Cell(ref) {
             if (!ref || ref.length !== 2) {
                 throw new TypeError("Cell ref invalid - should be 2-element array: " + ref);
             }
-            this.internal = {
-                row: ref[0],
-                col: ref[1],
-                name: "R" + ref[0] + "C" + ref[1],
+
+            this.row = ref[0];
+            this.col = ref[1];
+            this.name = "R" + ref[0] + "C" + ref[1];
+
+            this.toString = function Cell_toString() {
+                return this.name;
             };
+
+            Object.freeze(this);
         }
-
-        Cell.prototype = {
-
-            get row() { return this.internal.row; },
-            set row(value) { throw new TypeError(); },
-
-            get col() { return this.internal.col; },
-            set col(value) { throw new TypeError(); },
-
-            get name() { return this.internal.name; },
-            set name(value) { throw new TypeError(); },
-
-            toString: function Cell_toString() { return this.name; },
-        };
 
         return Cell;
     }());
@@ -135,55 +125,47 @@
 
             if (!arg.player) { throw new TypeError("'player' not defined"); }
 
-            this.internal = {
-                player: arg.player,
-                start:  new Cell(arg.from),
-                end:    new Cell(arg.to),
-            };
-        }
+            this.player = arg.player;
+            this.start = new Cell(arg.from);
+            this.end = new Cell(arg.to);
 
-        Move.prototype = {
-
-            get player() { return this.internal.player; },
-            set player(value) { throw new TypeError(); },
-
-            get start() { return this.internal.start; },
-            set start(value) { throw new TypeError(); },
-
-            get end() { return this.internal.end; },
-            set end(value) { throw new TypeError(); },
-
-            get horizontal() { return this.start.row === this.end.row; },
-            set horizontal(value) { throw new TypeError(); },
-
-            get vertical() { return this.start.col === this.end.col; },
-            set vertical(value) { throw new TypeError(); },
-
-            get path() {
-                var that = this;
-                if (this.horizontal) {
-                    return rangeExcInc(this.start.col, this.end.col)
-                        .map(function (colIndex) {
-                            return new Cell([that.start.row, colIndex]);
-                        });
-                }
-                if (this.vertical) {
-                    return rangeExcInc(this.start.row, this.end.row)
-                        .map(function (rowIndex) {
-                            return new Cell([rowIndex, that.start.col]);
-                        });
-                }
-                throw new TypeError("Invalid (diagonal) move coordinates.");
-            },
-            set path(value) { throw new TypeError(); },
-
-            toString: function Move_toString() {
+            this.toString = function Move_toString() {
                 return "{ player: " + this.player
                     + ", start: " + this.start
                     + ", end: " + this.end
                     + "}";
-            },
-        };
+            };
+
+            Object.defineProperties(this, {
+                horizontal: {
+                    get: function () { return this.start.row === this.end.row; }
+                },
+                vertical: {
+                    get: function () { return this.start.col === this.end.col; }
+                },
+                path: {
+                    get: function () {
+                        var that = this;
+                        if (this.horizontal) {
+                            return rangeExcInc(this.start.col, this.end.col)
+                                .map(function (colIndex) {
+                                    return new Cell([that.start.row, colIndex]);
+                                });
+                        }
+                        if (this.vertical) {
+                            return rangeExcInc(this.start.row, this.end.row)
+                                .map(function (rowIndex) {
+                                    return new Cell([rowIndex, that.start.col]);
+                                });
+                        }
+                        throw new Error("Invalid (diagonal) move coordinates.");
+                     }
+                },
+            });
+
+            Object.freeze(this);
+        }
+
         return Move;
     }());
 
