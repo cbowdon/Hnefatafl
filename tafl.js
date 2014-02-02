@@ -1,28 +1,76 @@
 (function (exports) {
     "use strict";
 
-    var Cell, Move, Board, types, team;
-
-    types = Object.freeze({
-        king: "k",
-        attacker: "a",
-        defender: "d",
-        safehouse: "S",
-        none: "-",
-        lookup: function (value) {
-            var key;
-            for (key in this) {
-                if (this.hasOwnProperty(key) && this[key] === value) {
-                    return key;
-                }
-            }
-            throw new TypeError("Type " + value + " not found");
-        },
-    });
+    var Cell,
+        Move,
+        Board,
+        piece,
+        types,
+        team;
 
     team = Object.freeze({
         attackers: "attackers",
         defenders: "defenders",
+    });
+
+    piece = Object.freeze({
+
+        sandwiched: function piece_sandwiched(adjacentPieces, enemy, cell) {
+            var oppositeRow,
+                oppositeCol;
+
+            if (cell.row === enemy.cell.row) {
+                oppositeRow = cell.row;
+                oppositeCol = (enemy.cell.col > cell.col)  ? cell.col + 2 : cell.col - 2;
+            } else {
+                oppositeRow = (enemy.cell.row > cell.row)  ? cell.row + 2 : cell.row - 2;
+                oppositeCol = cell.col;
+            }
+
+            return adjacentPieces
+                .filter(function (piece) {
+                    return piece.team === enemy.team;
+                })
+                .reduce(function (isOpposite, enemy) {
+                    return enemy.cell.row === oppositeRow
+                        && enemy.cell.col === oppositeCol;
+                });
+        },
+
+        toString: function piece_toString() {
+            return this.symbol;
+        },
+    });
+
+    types = Object.freeze({
+        attacker:   Object.create(piece, { symbol: { value: "a" }, team: { value: team.attackers } }),
+        defender:   Object.create(piece, { symbol: { value: "d" }, team: { value: team.defenders } }),
+        safehouse:  Object.create(piece, { symbol: { value: "#" } }),
+        none:       Object.create(piece, { symbol: { value: "-" } }),
+        king:       Object.create(piece, {
+            symbol:     { value: "k" },
+            team:       { value: team.defenders },
+            sandwiched: {
+                value: function kingSandwiched(adjacentPieces, enemy) {
+                    var surrounding = adjacentPieces
+                            .filter(function (piece) {
+                                return piece.team === enemy.team;
+                            });
+                    return 4 === surrounding.length;
+                }
+            }
+        }),
+        lookup: function (value) {
+            var prop;
+            for (prop in this) {
+                if (this.hasOwnProperty(prop)) {
+                    if (this[prop].symbol === value) {
+                        return this[prop];
+                    }
+                }
+            }
+            throw new TypeError("type not found: " + value);
+        },
     });
 
     // Immutable Cell
@@ -143,7 +191,7 @@
     Board = (function BoardClosure() {
         function createDefaultState() {
             return [
-                ["S", "-", "-", "a", "a", "a", "a", "a", "-", "-", "S"],
+                ["#", "-", "-", "a", "a", "a", "a", "a", "-", "-", "#"],
                 ["-", "-", "-", "-", "-", "a", "-", "-", "-", "-", "-"],
                 ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
                 ["a", "-", "-", "-", "-", "d", "-", "-", "-", "-", "a"],
@@ -153,15 +201,23 @@
                 ["a", "-", "-", "-", "-", "d", "-", "-", "-", "-", "a"],
                 ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
                 ["-", "-", "-", "-", "-", "a", "-", "-", "-", "-", "-"],
-                ["S", "-", "-", "a", "a", "a", "a", "a", "-", "-", "S"]
+                ["#", "-", "-", "a", "a", "a", "a", "a", "-", "-", "#"]
             ];
+        }
+
+        function buildBoard(state) {
+            return state.map(function (row, i) {
+                return row.map(function (symbol, j) {
+                    return types.lookup(symbol);
+                });
+            });
         }
 
         function Board(arg) {
             this.internal = arg || {
-                state: createDefaultState(),
+                state: buildBoard(createDefaultState()),
                 activePlayer: team.defenders, // could also be team.attackers
-                moves: [],
+                moveHistory: [],
                 finished: false,
             };
         }
@@ -209,23 +265,22 @@
             update: function Board_update(arg) {
                 var move    = new Move(arg),
                     errMsg  = this.invalid(move),
-                    tmp     = this.internal.state,
                     start   = move.start,
                     end     = move.end,
+                    piece   = this.occupant(start),
                     that    = this;
 
                 if (errMsg) {
                     throw new Error("Invalid move: " + move + " - " + errMsg);
                 }
 
-                this.internal.moves.push(move);
+                this.internal.moveHistory.push(move);
 
-                tmp[end.row][end.col]     = tmp[start.row][start.col];
-                tmp[start.row][start.col] = types.none;
-
-                if (this.occupant(end) === types.safehouse) {
+                this.deletePiece(start);
+                if (piece === types.king && this.occupant(end) === types.safehouse) {
                     this.winGame(team.defenders);
                 }
+                this.placePiece(end, piece);
 
                 // TODO less type-switching, more DAT OO
                 this.adjacent(end)
@@ -246,7 +301,12 @@
                         }
                     });
 
-                this.internal.activePlayer = this.activePlayer === team.attackers ?  team.defenders : team.attackers;
+                this.internal.activePlayer =
+                    (this.activePlayer === team.attackers) ?  team.defenders : team.attackers;
+            },
+
+            placePiece: function Board_placePiece(cell, piece) {
+                this.internal.state[cell.row][cell.col] = piece;
             },
 
             deletePiece: function Board_deletePiece(cell) {
@@ -260,6 +320,10 @@
                     oppositeCol,
                     oppositePiece;
 
+                if (piece === types.king) {
+                    throw new Error("not yet implemented");
+                }
+
                 if (cell.row === enemyCell.row) {
                     oppositeRow = cell.row;
                     oppositeCol = (enemyCell.col > cell.col)  ? cell.col + 2 : cell.col - 2;
@@ -271,8 +335,8 @@
                 oppositePiece = this.occupant(new Cell([oppositeRow, oppositeCol]));
 
                 return oppositePiece === piece
-                    || (piece === types.defender && oppositePiece === types.king)
-                    || (piece === types.king && oppositePiece === types.defender);
+                    || (piece === types.defender
+                            && oppositePiece === types.king);
             },
 
             winGame: function Board_winGame(winner) {
@@ -318,12 +382,22 @@
             },
 
             toString: function Board_toString() {
-                var tmp     = this.state[0].map(function () { return "-"; }),
-                    edge    = Array.join(tmp, '-'),
-                    rows    = this.state.map(function (row) {
-                        return "|" + Array.join(row, ' ') + "|";
+                var border, axis, rowStrings;
+                rowStrings = this.state.map(function (row, i) {
+                    var cellStrings = row.map(function (cell) {
+                        return cell.toString();
                     });
-                return edge + "-\n" + Array.join(rows, "\n") + "\n-" + edge;
+                    return "|" + Array.join(cellStrings, " ") + "| " + i;
+                });
+                border = Array.join(this.state[0].map(function () { return "-"; }), '-');
+                axis = Array.join(this.state[0].map(function (val, j) { return j; }), ' ');
+                return axis
+                    + "\n-"
+                    + border
+                    + "-\n"
+                    + Array.join(rowStrings, "\n")
+                    + "\n-"
+                    + border;
             },
         };
 
