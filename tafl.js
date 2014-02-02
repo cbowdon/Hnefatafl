@@ -15,26 +15,25 @@
 
     piece = Object.freeze({
 
-        sandwiched: function piece_sandwiched(adjacentPieces, enemy, cell) {
+        sandwiched: function piece_sandwiched(adjacent, enemy, cell) {
             var oppositeRow,
                 oppositeCol;
 
             if (cell.row === enemy.cell.row) {
                 oppositeRow = cell.row;
-                oppositeCol = (enemy.cell.col > cell.col)  ? cell.col + 2 : cell.col - 2;
+                oppositeCol = (enemy.cell.col > cell.col)  ? cell.col - 1 : cell.col + 1;
             } else {
-                oppositeRow = (enemy.cell.row > cell.row)  ? cell.row + 2 : cell.row - 2;
+                oppositeRow = (enemy.cell.row > cell.row)  ? cell.row - 1 : cell.row + 1;
                 oppositeCol = cell.col;
             }
 
-            return adjacentPieces
-                .filter(function (piece) {
-                    return piece.team === enemy.team;
+            return adjacent
+                .filter(function (data) {
+                    return data.piece.team === enemy.piece.team
+                        && data.cell.row === oppositeRow
+                        && data.cell.col === oppositeCol;
                 })
-                .reduce(function (isOpposite, enemy) {
-                    return enemy.cell.row === oppositeRow
-                        && enemy.cell.col === oppositeCol;
-                });
+                .length === 1;
         },
 
         toString: function piece_toString() {
@@ -206,8 +205,8 @@
         }
 
         function buildBoard(state) {
-            return state.map(function (row, i) {
-                return row.map(function (symbol, j) {
+            return state.map(function (row) {
+                return row.map(function (symbol) {
                     return types.lookup(symbol);
                 });
             });
@@ -237,7 +236,7 @@
                 var north   = new Cell([cell.row + 1, cell.col]),
                     south   = new Cell([cell.row - 1, cell.col]),
                     east    = new Cell([cell.row, cell.col + 1]),
-                    west    = new Cell([cell.row, cell.row - 1]);
+                    west    = new Cell([cell.row, cell.col - 1]);
 
                 return [north, south, east, west]
                     .filter(this.inBounds.bind(this));
@@ -270,6 +269,7 @@
                     piece   = this.occupant(start),
                     that    = this;
 
+
                 if (errMsg) {
                     throw new Error("Invalid move: " + move + " - " + errMsg);
                 }
@@ -277,66 +277,52 @@
                 this.internal.moveHistory.push(move);
 
                 this.deletePiece(start);
-                if (piece === types.king && this.occupant(end) === types.safehouse) {
-                    this.winGame(team.defenders);
-                }
                 this.placePiece(end, piece);
 
-                // TODO less type-switching, more DAT OO
-                this.adjacent(end)
-                    .filter(function (cell) {
-                        var piece = that.occupant(cell);
-                        if (that.activePlayer === team.attackers) {
-                            return piece === types.defender || piece === types.king;
-                        }
-                        return piece === types.attacker;
-                    })
-                    .filter(function (enemyCell) {
-                        var enemy = that.occupant(enemyCell);
-                        if (that.sandwiched(enemyCell, end)) {
-                            that.deletePiece(enemyCell);
-                            if (enemy === types.king) {
-                                that.winGame(team.attackers);
-                            }
-                        }
-                    });
+                this.performCaptures({ cell: end, piece: piece });
 
                 this.internal.activePlayer =
                     (this.activePlayer === team.attackers) ?  team.defenders : team.attackers;
+
+            },
+
+            performCaptures: function Board_performCaptures(arg) {
+                var that = this;
+
+                this.adjacent(arg.cell)
+                    .map(function (cell) {
+                        return { cell: cell, piece: that.occupant(cell) };
+                    })
+                    .filter(function (data) {
+                        return data.piece.team && data.piece.team !== that.activePlayer;
+                    })
+                    .filter(function (data) {
+                        var surrounding = that.adjacent(data.cell)
+                            .map(function (cell) {
+                                return {
+                                    cell: cell,
+                                    piece: that.occupant(cell)
+                                };
+                            });
+                        return data.piece.sandwiched(surrounding, arg, data.cell);
+                    })
+                    .forEach(function (data) {
+                        that.deletePiece(data.cell);
+                    });
             },
 
             placePiece: function Board_placePiece(cell, piece) {
+                if (this.occupant(cell) === types.safehouse) {
+                    this.winGame(team.defenders);
+                }
                 this.internal.state[cell.row][cell.col] = piece;
             },
 
             deletePiece: function Board_deletePiece(cell) {
+                if (this.occupant(cell) === types.king) {
+                    this.winGame(team.attackers);
+                }
                 this.internal.state[cell.row][cell.col] = types.none;
-            },
-
-            sandwiched: function Board_sandwiched(enemyCell, cell) {
-                var piece   = this.occupant(cell),
-                    enemy   = this.occupant(enemyCell),
-                    oppositeRow,
-                    oppositeCol,
-                    oppositePiece;
-
-                if (piece === types.king) {
-                    throw new Error("not yet implemented");
-                }
-
-                if (cell.row === enemyCell.row) {
-                    oppositeRow = cell.row;
-                    oppositeCol = (enemyCell.col > cell.col)  ? cell.col + 2 : cell.col - 2;
-                } else {
-                    oppositeRow = (enemyCell.row > cell.row)  ? cell.row + 2 : cell.row - 2;
-                    oppositeCol = cell.col;
-                }
-
-                oppositePiece = this.occupant(new Cell([oppositeRow, oppositeCol]));
-
-                return oppositePiece === piece
-                    || (piece === types.defender
-                            && oppositePiece === types.king);
             },
 
             winGame: function Board_winGame(winner) {
@@ -363,13 +349,7 @@
                     return "didn't move";
                 }
                 piece = this.occupant(move.start);
-                if (move.player === team.attackers
-                        && piece !== types.attacker) {
-                    return "player's piece not at start";
-                }
-                if (move.player === team.defenders
-                        && piece !== types.defender
-                        && piece !== types.king) {
+                if (move.player !== piece.team) {
                     return "player's piece not at start";
                 }
                 if (!move.horizontal && !move.vertical) {
@@ -387,15 +367,15 @@
                     var cellStrings = row.map(function (cell) {
                         return cell.toString();
                     });
-                    return "|" + Array.join(cellStrings, " ") + "| " + i;
+                    return "|" + cellStrings.join(" ") + "| " + i;
                 });
-                border = Array.join(this.state[0].map(function () { return "-"; }), '-');
-                axis = Array.join(this.state[0].map(function (val, j) { return j; }), ' ');
+                border = this.state[0].map(function () { return "-"; }).join("-");
+                axis = this.state[0].map(function (val, j) { return j; }).join(" ");
                 return axis
                     + "\n-"
                     + border
                     + "-\n"
-                    + Array.join(rowStrings, "\n")
+                    + rowStrings.join("\n")
                     + "\n-"
                     + border;
             },

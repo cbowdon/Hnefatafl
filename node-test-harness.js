@@ -2,7 +2,7 @@
 "use strict";
 
 var tafl = require("./tafl"),
-    test = require("./test"),
+    test = require("./test").test,
     board = new tafl.Board();
 
-test(board, tafl.team);
+test.run(board, tafl.team);
