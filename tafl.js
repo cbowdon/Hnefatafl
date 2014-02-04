@@ -366,9 +366,9 @@
         return Board;
     }());
 
-    exports.TypeError  = TypeError;
-    exports.Move       = Move;
-    exports.Board      = Board;
-    exports.team       = team;
+    exports.Move    = Move;
+    exports.Board   = Board;
+    exports.team    = team;
+    exports.types   = types;
 
 }(this));
