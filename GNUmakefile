@@ -1,7 +1,7 @@
 all: lint
 
 lint:
-	jslint *.js
+	jslint tafl*.js
 
 test: lint
 	node node-test-harness

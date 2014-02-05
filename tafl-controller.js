@@ -1,10 +1,22 @@
 /*jslint browser:true */
-/*globals Board, BoardView */
-(function () {
-  "use strict";
+/*globals $, Board, BoardView */
+(function (document, $) {
+    "use strict";
 
-  var boardModel = new Board(),
-      boardView = new BoardView();
+    var BoardController = (function BoardControllerClosure() {
 
+        function BoardController(boardModel, boardView) {
 
-}(this));
+        }
+
+        return BoardController;
+    }());
+
+    $(document).ready(function () {
+
+        var boardModel = new Board(),
+            boardView = new BoardView("#boardCanvas"),
+            boardController = new BoardController(boardModel, boardView);
+    });
+
+}(document, $));

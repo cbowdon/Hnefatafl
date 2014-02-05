@@ -159,7 +159,7 @@
                                 });
                         }
                         throw new Error("Invalid (diagonal) move coordinates.");
-                     }
+                    }
                 },
             });
 

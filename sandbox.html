@@ -4,20 +4,21 @@
     <script src="tafl.js"></script>
     <script src="jquery-2.1.0.js"></script>
     <script src="tafl.js"></script>
-    <script src="tafl-controller.js"></script>
     <script src="tafl-view.js"></script>
     <script src="test.js"></script>
     <script>
       $(document).ready(function () {
-        var board = new Board();
-        test.run(board, team);
+          var board = new Board();
+          test.run(board, team);
 
-        var boardView = new BoardView("#boardCanvas");
+          var boardView = new BoardView("#boardCanvas");
 
-        boardView.draw(typeInfo.king, 5, 5);
-        boardView.draw(typeInfo.safehouse, 0, 0);
-        boardView.draw(typeInfo.defender, 4, 4);
-        boardView.draw(typeInfo.attacker, 0, 4);
+          boardView.draw(typeInfo.king, 5, 5);
+          boardView.draw(typeInfo.safehouse, 0, 0);
+          boardView.draw(typeInfo.defender, 4, 4);
+          boardView.draw(typeInfo.attacker, 0, 4);
+
+          boardView.highlightCell(4, 4);
       });
     </script>
   </head>
