@@ -249,6 +249,8 @@
                 return this.state[cell.row][cell.col];
             },
 
+            // TODO it might be better to take a more functional approach
+            // and have update return data (e.g. active player, victory status)
             update: function Board_update(arg) {
                 var move    = new Move(arg),
                     errMsg  = this.invalid(move),

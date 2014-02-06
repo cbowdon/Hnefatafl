@@ -115,7 +115,7 @@
             };
 
             this.winner = function BoardView_winner(winner) {
-                alert("Winner: " + winner  + "!");
+                alert("Winner: " + winner + "!");
             };
 
             Object.defineProperties(this, {
@@ -143,8 +143,7 @@
                 if (moveStart && (moveStart[0] !== r || moveStart[1] !== c)) {
                     fireEvent("playermove", { from: moveStart, to: [r, c] });
                     moveStart = null;
-                }
-                else if (moveStart && moveStart[0] === r && moveStart[1] === c) {
+                } else if (moveStart && moveStart[0] === r && moveStart[1] === c) {
                     moveStart = null;
                     clearHighlights();
                 } else {
