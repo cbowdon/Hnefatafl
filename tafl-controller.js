@@ -7,6 +7,8 @@
 
         function BoardController(boardModel, boardView) {
 
+            boardView.addEventListener("playermove", function (move
+
         }
 
         return BoardController;

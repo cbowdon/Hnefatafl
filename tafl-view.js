@@ -19,24 +19,47 @@
                 x0          = canvas.offsetLeft,
                 y0          = canvas.offsetTop,
                 cellSize    = 50,
-                sideLength  = 11;
+                sideLength  = 11,
+                moveStarted = false,
+                listeners   = Object.create(null);
 
             function getRow(y) {
-                throw new Error("not yet impl");
+                var y1 = y - y0;
+                return Math.floor(y1 / cellSize);
             }
 
             function getCol(x) {
-                throw new Error("not yet impl");
+                var x1 = x - x0;
+                return Math.floor(x1 / cellSize);
             }
 
-            canvas.addEventListener("mouseup", function (mouseEvent) {
-                var x = mouseEvent.clientX - x0,
-                    y = mouseEvent.clientY - y0;
+            function getX(col) {
+                return col * cellSize;
+            }
 
+            function getY(row) {
+                return row * cellSize;
+            }
 
-                throw new Error("not yet impl");
+            function highlightCell(row, col) {
+                var x = getX(col),
+                    y = getY(row);
+                context.strokeStyle = "#00FF00";
+                context.strokeRect(x, y, cellSize, cellSize);
+            }
 
-            });
+            function fireEvent(eventName, args) {
+                listeners[eventName].forEach(function (listener) {
+                    listener(eventName, args);
+                });
+            }
+
+            this.addEventListener = function BoardView_addEventListener(eventName, listener) {
+                if (typeof listeners[eventName].push !== "function") {
+                    listeners[eventName] = [];
+                }
+                listeners[eventName].push(listener);
+            };
 
             this.redrawBoard = function BoardView_redrawBoard() {
                 $(canvas).attr({
@@ -45,16 +68,9 @@
                 });
             };
 
-            this.highlightCell = function Board_highlightCell(row, col) {
-                var x = col * cellSize,
-                    y = row * cellSize;
-                context.strokeStyle = "#00FF00";
-                context.strokeRect(x, y, cellSize, cellSize);
-            };
-
             this.draw = function BoardView_drawCell(type, row, col) {
-                var x = col * cellSize,
-                    y = row * cellSize;
+                var x = getX(col),
+                    y = getY(row);
                 context.fillStyle = type.color;
                 context.fillRect(x, y, cellSize, cellSize);
                 context.strokeStyle = "#000000";
@@ -78,6 +94,20 @@
             });
 
             this.redrawBoard();
+
+            canvas.addEventListener("mouseup", function (mouseEvent) {
+                var x = mouseEvent.clientX - x0,
+                    y = mouseEvent.clientY - y0,
+                    r = getRow(y),
+                    c = getCol(x);
+
+                if (moveStarted) {
+                    fireEvent("playermove", { row: r, col: c });
+                }
+                moveStarted = !moveStarted;
+
+                highlightCell(r, c);
+            });
         }
 
 
