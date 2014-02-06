@@ -9,8 +9,8 @@
         team;
 
     team = Object.freeze({
-        attackers: "attackers",
-        defenders: "defenders",
+        attackers: "Attackers",
+        defenders: "Defenders",
     });
 
     piece = Object.freeze({
@@ -214,6 +214,12 @@
             get activePlayer() { return this.internal.activePlayer; },
             set activePlayer(value) { throw new TypeError(); },
 
+            get finished() { return this.internal.finished; },
+            set finished(value) { throw new TypeError(); },
+
+            get winner() { return this.internal.winner; },
+            set winner(value) { throw new TypeError(); },
+
             adjacent: function Board_adjacent(cell) {
                 var north   = new Cell([cell.row + 1, cell.col]),
                     south   = new Cell([cell.row - 1, cell.col]),
@@ -301,7 +307,7 @@
             },
 
             deletePiece: function Board_deletePiece(cell) {
-                if (this.occupant(cell) === types.king) {
+                if (this.activePlayer === team.attackers && this.occupant(cell) === types.king) {
                     this.winGame(team.attackers);
                 }
                 this.internal.state[cell.row][cell.col] = types.none;

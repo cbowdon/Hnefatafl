@@ -10,15 +10,6 @@
       $(document).ready(function () {
           var board = new Board();
           test.run(board, team);
-
-          var boardView = new BoardView("#boardCanvas");
-
-          boardView.draw(typeInfo.king, 5, 5);
-          boardView.draw(typeInfo.safehouse, 0, 0);
-          boardView.draw(typeInfo.defender, 4, 4);
-          boardView.draw(typeInfo.attacker, 0, 4);
-
-          boardView.highlightCell(4, 4);
       });
     </script>
   </head>
