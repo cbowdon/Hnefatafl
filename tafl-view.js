@@ -1,6 +1,6 @@
 /*jslint browser: true, devel: true */
-/*global $ */
-(function (exports, document, $) {
+/*global Publisher */
+(function (exports, document, Publisher) {
     "use strict";
 
     exports.typeViewInfo = Object.freeze({
@@ -25,15 +25,17 @@
     exports.BoardView = (function BoardViewClosure() {
 
         function BoardView(canvasId, typeViewInfo) {
-            var canvas      = document.querySelector(canvasId),
+            var that        = this,
+                canvas      = document.querySelector(canvasId),
                 context     = canvas.getContext("2d"),
                 x0          = canvas.offsetLeft,
                 y0          = canvas.offsetTop,
                 cellSize    = 50,
                 sideLength  = 11,
                 moveStart   = null,
-                listeners   = Object.create(null),
                 highlighted = [];
+
+            Publisher.call(this);
 
             function getRow(y) {
                 var y1 = y - y0;
@@ -71,28 +73,9 @@
                 });
             }
 
-            function fireEvent(eventName, args) {
-                if (typeof listeners[eventName] === "object"
-                        && typeof listeners[eventName].forEach === "function") {
-                    listeners[eventName].forEach(function (listener) {
-                        listener(args);
-                    });
-                }
-            }
-
-            this.addEventListener = function BoardView_addEventListener(eventName, listener) {
-                if (typeof listeners[eventName] !== "object"
-                        || typeof listeners[eventName].push !== "function") {
-                    listeners[eventName] = [];
-                }
-                listeners[eventName].push(listener);
-            };
-
             this.redrawBoard = function BoardView_redrawBoard() {
-                $(canvas).attr({
-                    height: cellSize * sideLength,
-                    width: cellSize * sideLength,
-                });
+                canvas.height = cellSize * sideLength;
+                canvas.width = cellSize * sideLength;
             };
 
             this.draw = function BoardView_drawCell(symbol, row, col) {
@@ -141,7 +124,7 @@
                 highlightCell(r, c);
 
                 if (moveStart && (moveStart[0] !== r || moveStart[1] !== c)) {
-                    fireEvent("playermove", { from: moveStart, to: [r, c] });
+                    that.fireEvent("playermove", { from: moveStart, to: [r, c] });
                     moveStart = null;
                 } else if (moveStart && moveStart[0] === r && moveStart[1] === c) {
                     moveStart = null;
@@ -157,4 +140,4 @@
     }());
 
 
-}(this, document, $));
+}(this, document, Publisher));

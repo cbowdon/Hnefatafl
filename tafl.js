@@ -1,4 +1,5 @@
-(function (exports) {
+/*globals Publisher */
+(function (exports, Publisher) {
     "use strict";
 
     var Cell,
@@ -52,8 +53,8 @@
             sandwiched: {
                 value: function kingSandwiched(adjacentPieces, enemy) {
                     var surrounding = adjacentPieces
-                            .filter(function (piece) {
-                                return piece.team === enemy.team;
+                            .filter(function (data) {
+                                return data.piece.team === enemy.piece.team;
                             });
                     return 4 === surrounding.length;
                 }
@@ -195,30 +196,85 @@
         }
 
         function Board(arg) {
-            this.internal = arg || {
+            var internal = arg || {
                 state: buildBoard(createDefaultState()),
                 activePlayer: team.defenders, // could also be team.attackers
                 moveHistory: [],
                 finished: false,
             };
+
+            Publisher.call(this);
+
+            Object.defineProperties(this, {
+                state: {
+                    get: function () { return internal.state; },
+                    set: function (value) { throw new TypeError(); }
+                },
+                sideLength: {
+                    get: function () { return internal.state.length; },
+                    set: function (value) { throw new TypeError(); }
+                },
+                activePlayer: {
+                    get: function () { return internal.activePlayer; },
+                    set: function (value) { throw new TypeError(); }
+                },
+                finished: {
+                    get: function () { return internal.finished; },
+                    set: function (value) { throw new TypeError(); }
+                },
+                winner: {
+                    get: function () { return internal.winner; },
+                    set: function (value) { throw new TypeError(); }
+                },
+
+            });
+
+            // TODO it might be better to take a more functional approach
+            // and have update return data (e.g. active player, victory status)
+            this.update = function Board_update(arg) {
+                var move    = new Move(arg),
+                    errMsg  = this.invalid(move),
+                    start   = move.start,
+                    end     = move.end,
+                    piece   = this.occupant(start),
+                    that    = this;
+
+                if (errMsg) {
+                    throw new Error("Invalid move: " + move + " - " + errMsg);
+                }
+
+                internal.moveHistory.push(move);
+
+                this.deletePiece(start);
+                this.placePiece(end, piece);
+
+                this.performCaptures({ cell: end, piece: piece });
+
+                internal.activePlayer = (this.activePlayer === team.attackers) ?  team.defenders : team.attackers;
+
+            };
+
+            this.placePiece = function Board_placePiece(cell, piece) {
+                if (this.occupant(cell) === types.safehouse) {
+                    this.winGame(team.defenders);
+                }
+                internal.state[cell.row][cell.col] = piece;
+            };
+
+            this.deletePiece = function Board_deletePiece(cell) {
+                if (this.activePlayer === team.attackers && this.occupant(cell) === types.king) {
+                    this.winGame(team.attackers);
+                }
+                internal.state[cell.row][cell.col] = types.none;
+            };
+
+            this.winGame = function Board_winGame(winner) {
+                internal.finished = true;
+                internal.winner = winner;
+            };
         }
 
         Board.prototype = {
-
-            get state() { return this.internal.state; },
-            set state(value) { throw new TypeError(); },
-
-            get sideLength() { return this.state.length; },
-            set sideLength(value) { throw new TypeError(); },
-
-            get activePlayer() { return this.internal.activePlayer; },
-            set activePlayer(value) { throw new TypeError(); },
-
-            get finished() { return this.internal.finished; },
-            set finished(value) { throw new TypeError(); },
-
-            get winner() { return this.internal.winner; },
-            set winner(value) { throw new TypeError(); },
 
             adjacent: function Board_adjacent(cell) {
                 var north   = new Cell([cell.row + 1, cell.col]),
@@ -249,37 +305,10 @@
                 return this.state[cell.row][cell.col];
             },
 
-            // TODO it might be better to take a more functional approach
-            // and have update return data (e.g. active player, victory status)
-            update: function Board_update(arg) {
-                var move    = new Move(arg),
-                    errMsg  = this.invalid(move),
-                    start   = move.start,
-                    end     = move.end,
-                    piece   = this.occupant(start),
-                    that    = this;
-
-
-                if (errMsg) {
-                    throw new Error("Invalid move: " + move + " - " + errMsg);
-                }
-
-                this.internal.moveHistory.push(move);
-
-                this.deletePiece(start);
-                this.placePiece(end, piece);
-
-                this.performCaptures({ cell: end, piece: piece });
-
-                this.internal.activePlayer =
-                    (this.activePlayer === team.attackers) ?  team.defenders : team.attackers;
-
-            },
-
             performCaptures: function Board_performCaptures(arg) {
-                var that = this;
+                var that = this, taken;
 
-                this.adjacent(arg.cell)
+                taken = this.adjacent(arg.cell)
                     .map(function (cell) {
                         return { cell: cell, piece: that.occupant(cell) };
                     })
@@ -295,29 +324,13 @@
                                 };
                             });
                         return data.piece.sandwiched(surrounding, arg, data.cell);
-                    })
-                    .forEach(function (data) {
-                        that.deletePiece(data.cell);
                     });
-            },
 
-            placePiece: function Board_placePiece(cell, piece) {
-                if (this.occupant(cell) === types.safehouse) {
-                    this.winGame(team.defenders);
-                }
-                this.internal.state[cell.row][cell.col] = piece;
-            },
+                taken.forEach(function (data) {
+                    that.deletePiece(data.cell);
+                });
 
-            deletePiece: function Board_deletePiece(cell) {
-                if (this.activePlayer === team.attackers && this.occupant(cell) === types.king) {
-                    this.winGame(team.attackers);
-                }
-                this.internal.state[cell.row][cell.col] = types.none;
-            },
-
-            winGame: function Board_winGame(winner) {
-                this.internal.finished = true;
-                this.internal.winner = winner;
+                return taken;
             },
 
             invalid: function Board_invalid(move) {
@@ -361,12 +374,9 @@
                 });
                 border = this.state[0].map(function () { return "-"; }).join("-");
                 axis = this.state[0].map(function (val, j) { return j; }).join(" ");
-                return axis
-                    + "\n-"
-                    + border
-                    + "-\n"
-                    + rowStrings.join("\n")
-                    + "\n-"
+                return axis + "\n-"
+                    + border + "-\n"
+                    + rowStrings.join("\n") + "\n-"
                     + border;
             },
         };
@@ -377,6 +387,5 @@
     exports.Move    = Move;
     exports.Board   = Board;
     exports.team    = team;
-    exports.types   = types;
 
-}(this));
+}(this, Publisher));
