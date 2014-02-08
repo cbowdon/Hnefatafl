@@ -277,13 +277,20 @@
         Board.prototype = {
 
             adjacent: function Board_adjacent(cell) {
-                var north   = new Cell([cell.row + 1, cell.col]),
+                var that    = this,
+                    north   = new Cell([cell.row + 1, cell.col]),
                     south   = new Cell([cell.row - 1, cell.col]),
                     east    = new Cell([cell.row, cell.col + 1]),
                     west    = new Cell([cell.row, cell.col - 1]);
 
                 return [north, south, east, west]
-                    .filter(this.inBounds.bind(this));
+                    .filter(this.inBounds.bind(this))
+                    .map(function (cell) {
+                        return {
+                            cell: cell,
+                            piece: that.occupant(cell)
+                        };
+                    });
             },
 
             inBounds: function Board_inBounds(cell) {
@@ -306,31 +313,22 @@
             },
 
             performCaptures: function Board_performCaptures(arg) {
-                var that = this, taken;
+                var that = this, capturedPieces;
 
-                taken = this.adjacent(arg.cell)
-                    .map(function (cell) {
-                        return { cell: cell, piece: that.occupant(cell) };
-                    })
+                capturedPieces = this.adjacent(arg.cell)
                     .filter(function (data) {
                         return data.piece.team && data.piece.team !== that.activePlayer;
                     })
                     .filter(function (data) {
-                        var surrounding = that.adjacent(data.cell)
-                            .map(function (cell) {
-                                return {
-                                    cell: cell,
-                                    piece: that.occupant(cell)
-                                };
-                            });
+                        var surrounding = that.adjacent(data.cell);
                         return data.piece.sandwiched(surrounding, arg, data.cell);
                     });
 
-                taken.forEach(function (data) {
+                capturedPieces.forEach(function (data) {
                     that.deletePiece(data.cell);
                 });
 
-                return taken;
+                return capturedPieces;
             },
 
             invalid: function Board_invalid(move) {
