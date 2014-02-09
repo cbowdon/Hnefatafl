@@ -3,11 +3,19 @@
     <meta charset="utf-8" />
     <script src="jquery-2.1.0.js"></script>
     <script src="publisher.js"></script>
-    <script src="tafl.js"></script>
+    <script src="tafl-model.js"></script>
     <script src="tafl-view.js"></script>
     <script src="tafl-controller.js"></script>
     <script src="test.js"></script>
     <script>
+      // main
+      document.addEventListener("DOMContentLoaded", function () {
+          var boardModel = new Board(),
+              boardView = new BoardView("#boardCanvas", typeViewInfo),
+              boardController = new BoardController(boardModel, boardView);
+      });
+
+      // model tests
       $(document).ready(function () {
           var board = new Board();
           test.run(board, team);

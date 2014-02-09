@@ -139,10 +139,12 @@
 
             Object.defineProperties(this, {
                 horizontal: {
-                    get: function () { return this.start.row === this.end.row; }
+                    get: function () { return this.start.row === this.end.row; },
+                    set: function (value) { throw new TypeError(); },
                 },
                 vertical: {
-                    get: function () { return this.start.col === this.end.col; }
+                    get: function () { return this.start.col === this.end.col; },
+                    set: function (value) { throw new TypeError(); },
                 },
                 path: {
                     get: function () {
@@ -160,7 +162,8 @@
                                 });
                         }
                         throw new Error("Invalid (diagonal) move coordinates.");
-                    }
+                    },
+                    set: function (value) { throw new TypeError(); },
                 },
             });
 
@@ -271,6 +274,7 @@
             this.winGame = function Board_winGame(winner) {
                 internal.finished = true;
                 internal.winner = winner;
+                this.fireEvent("victory", winner);
             };
         }
 

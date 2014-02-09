@@ -3,26 +3,46 @@
 
     exports.Publisher = (function PublisherClosure() {
 
-        function Publisher() {
-            var listeners = Object.create(null);
+        function Event(name) {
+            var listeners = [];
 
-            this.fireEvent = function Publisher_fireEvent(eventName, args) {
-                if (typeof listeners[eventName] === "object"
-                        && typeof listeners[eventName].forEach === "function") {
-                    listeners[eventName].forEach(function (listener) {
-                        listener(args);
-                    });
+            this.addEventListener = function Event_addEventListener(listener) {
+                listeners.push(listener);
+            };
+
+            this.fire = function Event_fire(arg) {
+                listeners.forEach(function (listener) {
+                    listener(arg);
+                });
+            };
+
+            Object.defineProperty(this, "name", {
+                get: function () { return name; },
+                set: function (value) { throw new TypeError(); },
+            });
+        }
+
+        function Publisher() {
+            var events = {};
+
+            this.fireEvent = function Publisher_fireEvent(eventName, arg) {
+                if (!events.hasOwnProperty(eventName)) {
+                    events[eventName] = new Event(eventName);
                 }
+                events[eventName].fire(arg);
             };
 
             this.addEventListener = function Publisher_addEventListener(eventName, listener) {
-                if (typeof listeners[eventName] !== "object"
-                        || typeof listeners[eventName].push !== "function") {
-                    listeners[eventName] = [];
+                if (!events.hasOwnProperty(eventName)) {
+                    events[eventName] = new Event(eventName);
                 }
-                listeners[eventName].push(listener);
+                events[eventName].addEventListener(listener);
             };
 
+            Object.defineProperty(this, "events", {
+                get: function () { return events; },
+                set: function (value) { throw new TypeError(); },
+            });
         }
 
         return Publisher;

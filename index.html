@@ -2,9 +2,16 @@
   <head>
     <meta charset="utf-8" />
     <script src="publisher.js"></script>
-    <script src="tafl.js"></script>
+    <script src="tafl-model.js"></script>
     <script src="tafl-view.js"></script>
     <script src="tafl-controller.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var boardModel = new Board(),
+                boardView = new BoardView("#boardCanvas", typeViewInfo),
+                boardController = new BoardController(boardModel, boardView);
+        });
+    </script>
   </head>
   <body>
     <h1>Hnefatafl</h1>

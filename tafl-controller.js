@@ -1,9 +1,9 @@
 /*jslint browser:true */
-/*globals Board, BoardView, typeViewInfo, team */
-(function (document, Board, BoardView, typeViewInfo, team) {
+/*globals team */
+(function (exports, team) {
     "use strict";
 
-    var BoardController = (function BoardControllerClosure() {
+    exports.BoardController = (function BoardControllerClosure() {
 
         function BoardController(boardModel, boardView) {
             var activePlayer = boardModel.activePlayer;
@@ -39,10 +39,4 @@
         return BoardController;
     }());
 
-    document.addEventListener("DOMContentLoaded", function () {
-        var boardModel = new Board(),
-            boardView = new BoardView("#boardCanvas", typeViewInfo),
-            boardController = new BoardController(boardModel, boardView);
-    });
-
-}(document, Board, BoardView, typeViewInfo, team));
+}(this, team));
