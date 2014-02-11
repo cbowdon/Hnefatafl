@@ -17,21 +17,25 @@
                 });
             }
 
-            boardView.addEventListener("playermove", function (move) {
+            boardView.onPlayerChange(activePlayer);
 
+            boardModel.addEventListener("newturn", function (player) {
+                redrawCells(boardModel);
+                boardView.onPlayerChange(player);
+            });
+
+            boardView.addEventListener("playermove", function (move) {
                 try {
                     boardModel.update({ player: activePlayer, from: move.from, to: move.to });
                     activePlayer = (activePlayer === team.attackers) ? team.defenders : team.attackers;
                 } catch (err) {
-                    boardView.error(err);
+                    boardView.onError(err);
                 }
-
-                if (boardModel.finished) {
-                    boardView.winner(boardModel.winner);
-                }
-
-                redrawCells(boardModel);
             });
+
+            boardModel.addEventListener("victory", boardView.onWin.bind(boardView));
+
+            boardModel.addEventListener("capture", boardView.onCapture.bind(boardView));
 
             redrawCells(boardModel);
         }

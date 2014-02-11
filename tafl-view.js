@@ -24,8 +24,9 @@
 
     exports.BoardView = (function BoardViewClosure() {
 
-        function BoardView(canvasId, typeViewInfo) {
+        function BoardView(canvasId, messageBoxId, typeViewInfo) {
             var that        = this,
+                messageBox  = document.querySelector(messageBoxId),
                 canvas      = document.querySelector(canvasId),
                 context     = canvas.getContext("2d"),
                 x0          = canvas.offsetLeft,
@@ -93,12 +94,20 @@
                 context.fillText(type.symbol, x + cellSize / 2, y + cellSize * 0.9);
             };
 
-            this.error = function BoardView_error(err) {
+            this.onCapture = function BoardView_onCapture(captured) {
+                // TODO snazzy animation
+            };
+
+            this.onError = function BoardView_onError(err) {
                 alert(err.message);
             };
 
-            this.winner = function BoardView_winner(winner) {
+            this.onWin = function BoardView_onWin(winner) {
                 alert("Winner: " + winner + "!");
+            };
+
+            this.onPlayerChange = function BoardView_onPlayerChange(newPlayer) {
+                messageBox.innerHTML = "Make your move: " + newPlayer;
             };
 
             Object.defineProperties(this, {

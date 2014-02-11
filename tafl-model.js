@@ -132,19 +132,16 @@
 
             this.toString = function Move_toString() {
                 return "{ player: " + this.player
-                    + ", start: " + this.start
-                    + ", end: " + this.end
-                    + "}";
+                  + ", start: " + this.start
+                  + ", end: " + this.end + "}";
             };
 
             Object.defineProperties(this, {
                 horizontal: {
                     get: function () { return this.start.row === this.end.row; },
-                    set: function (value) { throw new TypeError(); },
                 },
                 vertical: {
                     get: function () { return this.start.col === this.end.col; },
-                    set: function (value) { throw new TypeError(); },
                 },
                 path: {
                     get: function () {
@@ -163,7 +160,6 @@
                         }
                         throw new Error("Invalid (diagonal) move coordinates.");
                     },
-                    set: function (value) { throw new TypeError(); },
                 },
             });
 
@@ -174,6 +170,7 @@
     }());
 
     Board = (function BoardClosure() {
+
         function createDefaultState() {
             return [
                 ["#", "-", "-", "a", "a", "a", "a", "a", "-", "-", "#"],
@@ -235,12 +232,13 @@
             // TODO it might be better to take a more functional approach
             // and have update return data (e.g. active player, victory status)
             this.update = function Board_update(arg) {
-                var move    = new Move(arg),
-                    errMsg  = this.invalid(move),
-                    start   = move.start,
-                    end     = move.end,
-                    piece   = this.occupant(start),
-                    that    = this;
+                var that      = this,
+                    move      = new Move(arg),
+                    errMsg    = this.invalid(move),
+                    start     = move.start,
+                    end       = move.end,
+                    piece     = this.occupant(start),
+                    captured  = [];
 
                 if (errMsg) {
                     throw new Error("Invalid move: " + move + " - " + errMsg);
@@ -251,10 +249,18 @@
                 this.deletePiece(start);
                 this.placePiece(end, piece);
 
-                this.performCaptures({ cell: end, piece: piece });
+                captured = this.performCaptures({ cell: end, piece: piece });
+
+                captured.forEach(function (data) {
+                    that.fireEvent("capture", data);
+                    that.deletePiece(data.cell);
+                    if (data.piece === types.king) {
+                      that.winGame(team.attackers);
+                    }
+                });
 
                 internal.activePlayer = (this.activePlayer === team.attackers) ?  team.defenders : team.attackers;
-
+                this.fireEvent("newturn", internal.activePlayer);
             };
 
             this.placePiece = function Board_placePiece(cell, piece) {
@@ -265,9 +271,6 @@
             };
 
             this.deletePiece = function Board_deletePiece(cell) {
-                if (this.activePlayer === team.attackers && this.occupant(cell) === types.king) {
-                    this.winGame(team.attackers);
-                }
                 internal.state[cell.row][cell.col] = types.none;
             };
 

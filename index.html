@@ -8,7 +8,7 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             var boardModel = new Board(),
-                boardView = new BoardView("#boardCanvas", typeViewInfo),
+                boardView = new BoardView("#boardCanvas", "#messageBox", typeViewInfo),
                 boardController = new BoardController(boardModel, boardView);
         });
     </script>
@@ -16,5 +16,6 @@
   <body>
     <h1>Hnefatafl</h1>
     <canvas id="boardCanvas" width=100 height=100 style="border-style: dashed"></canvas>
+    <div id="messageBox"></div>
   </body>
 </html>
